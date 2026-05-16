@@ -179,9 +179,16 @@
       gap: 5px;
     }
 
-    button:hover, button.active {
+    button.active {
       background: var(--btn-hover);
       border-color: var(--accent);
+    }
+
+    @media (hover: hover) {
+      button:hover {
+        background: var(--btn-hover);
+        border-color: var(--accent);
+      }
     }
 
     .swatch {
@@ -481,6 +488,7 @@
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 1000);
     camera.position.set(3.2, 2.6, 4.0);
+    const initialCameraPosition = camera.position.clone();
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -560,9 +568,21 @@
       darkBlack: ['#111317', '#111317']
     };
 
-    function updateCoordinateDisplay(position = controls.target) {
-      const p = position;
+    function updateCoordinateDisplay(position = pivot.position) {
+      const p = position.clone ? position.clone() : new THREE.Vector3(position.x, position.y, position.z);
+      const viewOffset = camera.position.clone().sub(initialCameraPosition).multiplyScalar(0.1);
+      p.add(viewOffset);
+      p.x += pivot.rotation.x;
+      p.y += pivot.rotation.y;
+      p.z += pivot.rotation.z;
       coordsEl.innerHTML = `X=<b>${p.x.toFixed(2)}</b> Y=<b>${p.y.toFixed(2)}</b> Z=<b>${p.z.toFixed(2)}</b>`;
+    }
+
+    function stopAllSpin() {
+      spinHorizontal = false;
+      spinVertical = false;
+      btnSpinH.classList.remove('active');
+      btnSpinV.classList.remove('active');
     }
 
     function setPivotPosition(x, y, z) {
@@ -573,6 +593,8 @@
 
     function resetPose() {
       clearTimeout(menuCollapseTimer);
+      stopAllSpin();
+      btnA.classList.add('active');
       setPivotPosition(1, 1, 1);
       pivot.rotation.set(0, 0, 0);
       if (modelRoot) {
@@ -583,6 +605,7 @@
       camera.lookAt(pivot.position);
       controls.update();
       updateCoordinateDisplay(pivot.position);
+      setTimeout(() => btnA.classList.remove('active'), 180);
     }
 
     function setTopViewPositive() {
@@ -721,6 +744,11 @@
     }
 
     function saveCurrentFrame() {
+      const hiddenForSave = [coordsEl, statusEl, btnMenuToggle, document.querySelector('.top-left'), document.querySelector('.bottom-actions')];
+      const previousDisplays = hiddenForSave.map((element) => element ? element.style.display : null);
+      hiddenForSave.forEach((element) => {
+        if (element) element.style.display = 'none';
+      });
       controls.update();
       renderer.render(scene, camera);
       const source = renderer.domElement;
@@ -741,6 +769,9 @@
       link.download = `glb-view-${stamp}.png`;
       link.href = output.toDataURL('image/png');
       link.click();
+      hiddenForSave.forEach((element, index) => {
+        if (element) element.style.display = previousDisplays[index];
+      });
     }
 
     function apiUrl(path) {
