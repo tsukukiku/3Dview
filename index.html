@@ -1025,7 +1025,8 @@
       }
 
       const job = await requestJson(`/api/jobs/${currentJobId}`);
-      setStatus(`生成进度: ${job.status} ${job.progress || 0}%`);
+      const providerStatus = job.providerStatus ? ` / ${job.providerStatus}` : '';
+      setStatus(`生成进度: ${job.status}${providerStatus} ${job.progress || 0}%`);
 
       if (job.status === 'FINISHED' && job.modelUrl) {
         clearInterval(jobPollTimer);
@@ -1073,7 +1074,7 @@
           })
         });
         currentJobId = job.id;
-        setStatus(`任务已提交: ${job.id}`);
+        setStatus(`任务已提交，后台生成中: ${job.id}`);
 
         clearInterval(jobPollTimer);
         jobPollTimer = setInterval(() => {
@@ -1083,7 +1084,7 @@
             setGenerating(false);
             setStatus(`进度检查失败: ${error.message}`);
           });
-        }, 1200);
+        }, 5000);
         await checkGenerationJob(false);
       } catch (error) {
         setGenerating(false);
