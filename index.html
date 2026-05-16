@@ -129,6 +129,7 @@
     body.viewer-fullscreen .top-left,
     body.viewer-fullscreen .menu-handle,
     body.viewer-fullscreen .bottom-status,
+    body.viewer-fullscreen .brightness-control,
     body.viewer-fullscreen .standard-only {
       display: none;
     }
@@ -245,6 +246,35 @@
       align-items: center;
     }
 
+    .brightness-control {
+      position: fixed;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 24;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 4px;
+      color: var(--text);
+      font-size: 11px;
+    }
+
+    .brightness-control label {
+      writing-mode: vertical-rl;
+      letter-spacing: 2px;
+      line-height: 1;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    }
+
+    .brightness-control input[type="range"] {
+      width: 28px;
+      height: 120px;
+      writing-mode: vertical-lr;
+      direction: rtl;
+    }
+
     .light-row .swatch-group {
       display: inline-flex;
       gap: 4px;
@@ -337,6 +367,13 @@
       input[type="range"] {
         width: 96px;
       }
+      .brightness-control {
+        right: 4px;
+      }
+      .brightness-control input[type="range"] {
+        width: 26px;
+        height: 104px;
+      }
       input[type="file"] {
         width: 100%;
       }
@@ -357,6 +394,10 @@
     <canvas id="viewer"></canvas>
     <button class="hud menu-handle" id="btnMenuToggle" title="显示/隐藏顶部菜单">菜单</button>
     <div class="coords" id="coords">X=<b>1.00</b> Y=<b>1.00</b> Z=<b>1.00</b></div>
+    <div class="brightness-control" id="brightnessControl">
+      <label for="brightnessSlider">亮度</label>
+      <input id="brightnessSlider" type="range" min="0" max="100" value="49" />
+    </div>
 
     <div class="hud top-left">
       <div class="file-row">
@@ -430,8 +471,8 @@
             <button class="swatch" data-bg="deepBlue" title="深蓝" style="--swatch:#0b3f7a"></button>
             <button class="swatch" data-bg="darkBlack" title="雅黑" style="--swatch:#111317"></button>
           </div>
-          <label for="lightSlider">灯光:</label>
-          <input id="lightSlider" type="range" min="45" max="180" value="100" />
+          <label for="lightColorSlider">光色:</label>
+          <input id="lightColorSlider" type="range" min="-100" max="100" value="0" />
         </div>
       </div>
     </div>
@@ -479,7 +520,9 @@
     const btnSpinH = document.getElementById('btnSpinH');
     const btnSpinV = document.getElementById('btnSpinV');
     const btnToggleCoords = document.getElementById('btnToggleCoords');
-    const lightSlider = document.getElementById('lightSlider');
+    const brightnessSlider = document.getElementById('brightnessSlider');
+    const brightnessControl = document.getElementById('brightnessControl');
+    const lightColorSlider = document.getElementById('lightColorSlider');
     const bgButtons = document.querySelectorAll('[data-bg]');
     const API_BASE_URL = (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL || '').replace(/\/$/, '');
 
@@ -526,7 +569,8 @@
       hemi: hemi.intensity,
       dir: dir.intensity,
       fill: fill.intensity,
-      front: front.intensity
+      front: front.intensity,
+      envMapIntensity: 1.8
     };
 
     const grid = new THREE.GridHelper(20, 20, 0x94a3b8, 0x334155);
@@ -663,10 +707,11 @@
         const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
         materials.forEach((material) => {
           if (!material) return;
-          material.envMapIntensity = 1.8;
+          material.envMapIntensity = lightDefaults.envMapIntensity;
           material.needsUpdate = true;
         });
       });
+      applyBrightness(brightnessSlider.value);
     }
 
     const loader = new GLTFLoader();
@@ -703,13 +748,41 @@
       bgButtons.forEach((button) => button.classList.toggle('active', button.dataset.bg === name));
     }
 
-    function applyLight(percent) {
-      const scale = Number(percent) / 100;
+    function applyBrightness(value) {
+      const minScale = 0.225;
+      const maxScale = 1.8;
+      const scale = minScale + (Number(value) / 100) * (maxScale - minScale);
       renderer.toneMappingExposure = lightDefaults.exposure * scale;
       hemi.intensity = lightDefaults.hemi * scale;
       dir.intensity = lightDefaults.dir * scale;
       fill.intensity = lightDefaults.fill * scale;
       front.intensity = lightDefaults.front * scale;
+      if (modelRoot) {
+        modelRoot.traverse((obj) => {
+          if (!obj.isMesh || !obj.material) return;
+          const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+          materials.forEach((material) => {
+            if (!material) return;
+            material.envMapIntensity = lightDefaults.envMapIntensity * scale;
+            material.needsUpdate = true;
+          });
+        });
+      }
+    }
+
+    function colorFromTemperature(value) {
+      const amount = Math.abs(Number(value)) / 100;
+      const white = new THREE.Color(0xffffff);
+      const target = Number(value) < 0 ? new THREE.Color(0xbfdcff) : new THREE.Color(0xffd2a1);
+      return white.lerp(target, amount);
+    }
+
+    function applyLightColor(value) {
+      const color = colorFromTemperature(value);
+      hemi.color.copy(color);
+      dir.color.copy(color);
+      fill.color.copy(color);
+      front.color.copy(color);
     }
 
     function setCoordsVisible(visible) {
@@ -744,7 +817,7 @@
     }
 
     function saveCurrentFrame() {
-      const hiddenForSave = [coordsEl, statusEl, btnMenuToggle, document.querySelector('.top-left'), document.querySelector('.bottom-actions')];
+      const hiddenForSave = [coordsEl, statusEl, btnMenuToggle, brightnessControl, document.querySelector('.top-left'), document.querySelector('.bottom-actions')];
       const previousDisplays = hiddenForSave.map((element) => element ? element.style.display : null);
       hiddenForSave.forEach((element) => {
         if (element) element.style.display = 'none';
@@ -957,7 +1030,8 @@
       button.addEventListener('click', () => applyBackground(button.dataset.bg));
     });
 
-    lightSlider.addEventListener('input', () => applyLight(lightSlider.value));
+    brightnessSlider.addEventListener('input', () => applyBrightness(brightnessSlider.value));
+    lightColorSlider.addEventListener('input', () => applyLightColor(lightColorSlider.value));
 
     window.addEventListener('resize', updateRendererSize);
 
@@ -981,7 +1055,8 @@
 
     resetPose();
     applyBackground('whiteGray');
-    applyLight(lightSlider.value);
+    applyBrightness(brightnessSlider.value);
+    applyLightColor(lightColorSlider.value);
     setCoordsVisible(true);
     setMenuCollapsed(false);
     updateCoordinateDisplay();
