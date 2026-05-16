@@ -1,3 +1,3 @@
 window.APP_CONFIG = {
-  API_BASE_URL: "http://tsukukiku.synology.me:8081"
+  API_BASE_URL: "https://www.star-style-studio.net/3dview"
 };
