@@ -50,8 +50,7 @@
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
     }
 
-    .top-left,
-    .top-right {
+    .top-left {
       transition: transform 220ms ease, opacity 180ms ease;
     }
 
@@ -65,11 +64,15 @@
     }
 
     .top-right {
-      top: 12px;
-      right: 12px;
-      padding: 5px;
+      position: static;
       display: grid;
       gap: 5px;
+      max-width: none;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     .bottom-status {
@@ -117,15 +120,13 @@
       display: flex;
     }
 
-    body.menu-collapsed .top-left,
-    body.menu-collapsed .top-right {
+    body.menu-collapsed .top-left {
       transform: translateY(calc(-100% - 24px));
       opacity: 0;
       pointer-events: none;
     }
 
     body.viewer-fullscreen .top-left,
-    body.viewer-fullscreen .top-right,
     body.viewer-fullscreen .menu-handle,
     body.viewer-fullscreen .bottom-status,
     body.viewer-fullscreen .standard-only {
@@ -250,17 +251,8 @@
     }
 
     @media (max-width: 720px) {
-      .top-left, .top-right {
+      .top-left {
         max-width: calc(100% - 24px);
-      }
-      .top-right {
-        position: static;
-        max-width: none;
-        padding: 0;
-        background: transparent;
-        border: 0;
-        box-shadow: none;
-        backdrop-filter: none;
       }
       body.menu-collapsed .top-left {
         transform: translateY(calc(-100% - 24px));
@@ -461,11 +453,6 @@
     const axes = new THREE.AxesHelper(3);
     scene.add(axes);
 
-    const markerGeometry = new THREE.SphereGeometry(0.06, 24, 24);
-    const markerMaterial = new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x0ea5e9, emissiveIntensity: 0.4 });
-    const positionMarker = new THREE.Mesh(markerGeometry, markerMaterial);
-    scene.add(positionMarker);
-
     const pivot = new THREE.Object3D();
     pivot.position.set(1, 1, 1);
     scene.add(pivot);
@@ -501,7 +488,6 @@
     function updateCoordinateDisplay() {
       const p = pivot.position;
       coordsEl.innerHTML = `X=<b>${p.x.toFixed(2)}</b> Y=<b>${p.y.toFixed(2)}</b> Z=<b>${p.z.toFixed(2)}</b>`;
-      positionMarker.position.copy(p);
       controls.target.copy(p);
     }
 
@@ -612,7 +598,6 @@
       coordsVisible = visible;
       grid.visible = visible;
       axes.visible = visible;
-      positionMarker.visible = visible;
       coordsEl.style.display = visible ? '' : 'none';
       btnToggleCoords.classList.toggle('active', visible);
     }
