@@ -509,6 +509,7 @@
           <option value="assets/Military- J-10s.glb">Military- J-10s</option>
           <option value="assets/Military- bf110.glb">Military- bf110</option>
           <option value="assets/Military- AH-1Z_viper.glb">Military- AH-1Z_viper</option>
+          <option value="assets/Generated- BF109_tripo.glb">Generated- BF109_tripo</option>
           <option value="assets/Food- hamburger-value_meal.glb">Food- hamburger-value_meal</option>
           <option value="assets/Food- cabbage.glb">Food- cabbage</option>
         </select>
@@ -768,12 +769,17 @@
       modelRoot = null;
     }
 
-    function fitCameraToObject(object3D) {
+    function centerModelOnPivot(object3D) {
       const box = new THREE.Box3().setFromObject(object3D);
-      const size = box.getSize(new THREE.Vector3());
+      if (box.isEmpty()) return new THREE.Vector3(1, 1, 1);
       const center = box.getCenter(new THREE.Vector3());
+      object3D.position.sub(center.sub(pivot.position));
+      const recenteredBox = new THREE.Box3().setFromObject(object3D);
+      return recenteredBox.getSize(new THREE.Vector3());
+    }
 
-      object3D.position.sub(center);
+    function fitCameraToObject(object3D) {
+      const size = centerModelOnPivot(object3D);
 
       const maxSize = Math.max(size.x, size.y, size.z, 0.2);
       const distance = maxSize * 2.2;
@@ -781,6 +787,8 @@
       camera.near = maxSize / 100;
       camera.far = maxSize * 100;
       camera.updateProjectionMatrix();
+      controls.target.copy(pivot.position);
+      camera.lookAt(pivot.position);
       controls.update();
     }
 
@@ -1093,8 +1101,11 @@
       setStatus('正在加载模型...');
       loader.load(url, (gltf) => {
         clearModel();
-        modelRoot = gltf.scene;
-        prepareModelMaterials(modelRoot);
+        const holder = new THREE.Group();
+        holder.name = 'CenteredModelHolder';
+        holder.add(gltf.scene);
+        modelRoot = holder;
+        prepareModelMaterials(gltf.scene);
         pivot.add(modelRoot);
         fitCameraToObject(modelRoot);
         setStatus('模型加载完成');
