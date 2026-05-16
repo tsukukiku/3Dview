@@ -221,6 +221,55 @@
       flex-wrap: wrap;
     }
 
+    .prompt-row {
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr);
+      gap: 6px;
+      align-items: stretch;
+    }
+
+    .sample-uploader {
+      display: grid;
+      gap: 4px;
+      align-content: start;
+    }
+
+    .preview-box {
+      width: 86px;
+      height: 54px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: rgba(15, 23, 42, 0.72);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: rgba(226, 232, 240, 0.62);
+      font-size: 10px;
+    }
+
+    .preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .passcode-input {
+      width: 82px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.92);
+      color: var(--text);
+      border-radius: 7px;
+      padding: 5px 7px;
+      font-size: 12px;
+      min-height: 30px;
+    }
+
+    .limit-note {
+      font-size: 10px;
+      opacity: 0.72;
+    }
+
     .action-row,
     .library-row,
     .light-row {
@@ -365,6 +414,13 @@
       .action-row {
         flex-wrap: wrap;
       }
+      .prompt-row {
+        grid-template-columns: 78px minmax(0, 1fr);
+      }
+      .preview-box {
+        width: 78px;
+        height: 50px;
+      }
       .library-row select {
         width: 46vw;
       }
@@ -413,10 +469,16 @@
     </div>
 
     <div class="hud top-left">
-      <div class="file-row">
+      <div class="prompt-row">
+        <div class="sample-uploader">
+          <button id="btnSampleImage" title="上传给Triple3D参考的样本照片">样本照片</button>
+          <input id="sampleImageInput" type="file" accept="image/*" style="display:none" />
+          <div class="preview-box" id="samplePreview">预览</div>
+        </div>
         <textarea id="promptInput" placeholder="输入提示词，例如：a silver jeep wrangler rubicon, pbr texture"></textarea>
       </div>
       <div class="file-row action-row">
+        <input class="passcode-input" id="passcodeInput" type="password" placeholder="口令" autocomplete="off" />
         <button id="btnGenerate" title="从后端API生成GLB并自动加载">
           <span class="icon">✦</span>生成3D
         </button>
@@ -428,6 +490,7 @@
         </button>
         <input id="fileInput" type="file" accept=".glb,.gltf" style="display:none" />
       </div>
+      <div class="limit-note">口令：3DVIEW。照片会自动压缩到5MB以下。每IP每天最多2次生成。</div>
       <div class="file-row library-row">
         <label for="libSelect">库内模型:</label>
         <select id="libSelect">
@@ -514,6 +577,10 @@
     const statusEl = document.getElementById('status');
     const btnMenuToggle = document.getElementById('btnMenuToggle');
     const promptInput = document.getElementById('promptInput');
+    const passcodeInput = document.getElementById('passcodeInput');
+    const btnSampleImage = document.getElementById('btnSampleImage');
+    const sampleImageInput = document.getElementById('sampleImageInput');
+    const samplePreview = document.getElementById('samplePreview');
     const btnGenerate = document.getElementById('btnGenerate');
     const btnCheckJob = document.getElementById('btnCheckJob');
     const fileInput = document.getElementById('fileInput');
@@ -603,6 +670,7 @@
     let menuCollapsed = false;
     let currentBackground = 'whiteGray';
     let currentSaturation = 100;
+    let sampleImagePayload = null;
     let currentJobId = null;
     let jobPollTimer = null;
     let menuCollapseTimer = null;
@@ -742,6 +810,72 @@
     function setGenerating(isGenerating) {
       btnGenerate.disabled = isGenerating;
       btnGenerate.classList.toggle('active', isGenerating);
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function loadImage(dataUrl) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = dataUrl;
+      });
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+      return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+    }
+
+    async function compressImageForUpload(file) {
+      const maxBytes = 5 * 1024 * 1024;
+      const sourceDataUrl = await readFileAsDataUrl(file);
+      const image = await loadImage(sourceDataUrl);
+      let maxSide = Math.max(image.width, image.height);
+      let quality = 0.86;
+      let blob = null;
+
+      for (let attempt = 0; attempt < 9; attempt += 1) {
+        const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas2d = document.createElement('canvas');
+        canvas2d.width = width;
+        canvas2d.height = height;
+        const ctx = canvas2d.getContext('2d');
+        ctx.drawImage(image, 0, 0, width, height);
+        blob = await canvasToBlob(canvas2d, 'image/jpeg', quality);
+        if (blob && blob.size <= maxBytes) break;
+        if (quality > 0.58) quality -= 0.12;
+        else maxSide = Math.round(maxSide * 0.78);
+      }
+
+      if (!blob || blob.size > maxBytes) {
+        throw new Error('照片压缩后仍超过5MB，请换一张较小的照片');
+      }
+
+      const dataUrl = await readFileAsDataUrl(blob);
+      return {
+        dataUrl,
+        mimeType: 'image/jpeg',
+        bytes: blob.size,
+        originalName: file.name
+      };
+    }
+
+    function setSamplePreview(payload) {
+      if (!payload) {
+        samplePreview.textContent = '预览';
+        return;
+      }
+      samplePreview.innerHTML = `<img src="${payload.dataUrl}" alt="样本照片预览">`;
     }
 
     function setMenuCollapsed(collapsed) {
@@ -904,8 +1038,17 @@
 
     async function startGeneration() {
       const prompt = promptInput.value.trim();
+      const passcode = passcodeInput.value.trim();
       if (!prompt) {
         alert('请输入生成提示词');
+        return;
+      }
+      if (passcode !== '3DVIEW') {
+        alert('请输入正确口令：3DVIEW');
+        return;
+      }
+      if (!sampleImagePayload) {
+        alert('请先上传样本照片');
         return;
       }
 
@@ -915,7 +1058,11 @@
         setStatus('正在提交生成任务...');
         const job = await requestJson('/api/generate', {
           method: 'POST',
-          body: JSON.stringify({ prompt })
+          body: JSON.stringify({
+            prompt,
+            passcode,
+            image: sampleImagePayload
+          })
         });
         currentJobId = job.id;
         setStatus(`任务已提交: ${job.id}`);
@@ -970,6 +1117,10 @@
       fileInput.click();
     });
 
+    btnSampleImage.addEventListener('click', () => {
+      sampleImageInput.click();
+    });
+
     btnGenerate.addEventListener('click', startGeneration);
 
     btnCheckJob.addEventListener('click', () => {
@@ -982,6 +1133,22 @@
 
       const url = URL.createObjectURL(file);
       loadModelFromUrl(url, true);
+    });
+
+    sampleImageInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        setStatus('正在压缩样本照片...');
+        sampleImagePayload = await compressImageForUpload(file);
+        setSamplePreview(sampleImagePayload);
+        setStatus(`样本照片已准备 ${Math.round(sampleImagePayload.bytes / 1024)}KB`);
+      } catch (error) {
+        sampleImagePayload = null;
+        setSamplePreview(null);
+        setStatus(`照片处理失败: ${error.message}`);
+        alert(error.message);
+      }
     });
 
     btnLoadLib.addEventListener('click', () => {
