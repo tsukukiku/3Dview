@@ -13,7 +13,7 @@
       --accent: #22d3ee;
       --btn: rgba(15, 23, 42, 0.92);
       --btn-hover: rgba(30, 41, 59, 0.95);
-      --border: rgba(148, 163, 184, 0.35);
+      --border: rgba(148, 163, 184, 0.28);
     }
 
     * { box-sizing: border-box; }
@@ -46,7 +46,7 @@
       backdrop-filter: blur(8px);
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 10px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
     }
 
@@ -58,7 +58,7 @@
     .top-left {
       top: 12px;
       left: 12px;
-      padding: 10px;
+      padding: 8px;
       display: grid;
       gap: 8px;
       min-width: 220px;
@@ -67,9 +67,9 @@
     .top-right {
       top: 12px;
       right: 12px;
-      padding: 10px;
+      padding: 8px;
       display: grid;
-      gap: 8px;
+      gap: 6px;
     }
 
     .bottom-status {
@@ -86,23 +86,23 @@
       transform: translateX(-50%);
       border-top-left-radius: 0;
       border-top-right-radius: 0;
-      padding: 6px 12px;
+      padding: 5px 10px;
       z-index: 24;
     }
 
     .bottom-actions {
       right: 16px;
       bottom: 16px;
-      padding: 10px;
+      padding: 7px;
       display: flex;
-      gap: 8px;
+      gap: 6px;
       z-index: 25;
     }
 
     .bottom-actions button {
       font-size: 15px;
-      min-height: 44px;
-      padding: 10px 14px;
+      min-height: 40px;
+      padding: 8px 12px;
     }
 
     .fullscreen-only {
@@ -149,7 +149,7 @@
     .buttons {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 5px;
     }
 
     button {
@@ -157,10 +157,10 @@
       background: var(--btn);
       color: var(--text);
       border-radius: 10px;
-      padding: 8px 10px;
+      padding: 7px 9px;
       cursor: pointer;
       font-size: 13px;
-      min-height: 36px;
+      min-height: 34px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -172,16 +172,16 @@
     }
 
     .swatch {
-      width: 34px;
-      min-width: 34px;
+      width: 30px;
+      min-width: 30px;
       padding: 0;
       justify-content: center;
     }
 
     .swatch::before {
       content: "";
-      width: 16px;
-      height: 16px;
+      width: 15px;
+      height: 15px;
       border-radius: 50%;
       border: 1px solid rgba(255, 255, 255, 0.7);
       background: var(--swatch);
@@ -229,9 +229,19 @@
       background: var(--btn);
       color: var(--text);
       border-radius: 10px;
-      padding: 8px 10px;
-      min-height: 36px;
+      padding: 7px 9px;
+      min-height: 34px;
       font-size: 13px;
+    }
+
+    .axis-button {
+      width: 34px;
+      min-width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 50%;
+      justify-content: center;
+      font-weight: 700;
     }
 
     .hint {
@@ -244,11 +254,21 @@
         max-width: calc(100% - 24px);
       }
       .top-right {
-        right: 12px;
+        left: 12px;
+        right: auto;
         top: 12px;
+        transform: translateY(calc(100% + 10px));
+        max-width: calc(100% - 24px);
+      }
+      body.menu-collapsed .top-right {
+        transform: translateY(calc(-100% - 24px));
+      }
+      body.menu-collapsed .top-left {
+        transform: translateY(calc(-100% - 24px));
       }
       .top-left {
         min-width: 0;
+        width: calc(100% - 24px);
       }
       input[type="file"] {
         width: 100%;
@@ -256,6 +276,10 @@
       .bottom-actions {
         right: 10px;
         bottom: 10px;
+      }
+      .bottom-actions button {
+        min-height: 38px;
+        padding: 7px 11px;
       }
     }
   </style>
@@ -289,9 +313,22 @@
         <label for="libSelect">库内模型:</label>
         <select id="libSelect">
           <option value="">请选择</option>
-          <option value="assets/2011_bugatti_veyron_super_sport.glb">Bugatti Veyron</option>
-          <option value="assets/jeep_wrangler_adventure_rubicon__www.vecarz.com.glb">Jeep Wrangler</option>
-          <option value="assets/redbull_rb19_oracle__www.vecarz.com.glb">Redbull RB19</option>
+          <option value="assets/Vehicle-jeep_wrangler_adventure_rubicon.glb">Vehicle-jeep_wrangler_adventure_rubicon</option>
+          <option value="assets/Vehicle- redbull_rb19_oracle__www.vecarz.com.glb">Vehicle- redbull_rb19_oracle__www.vecarz.com</option>
+          <option value="assets/Vehicle- 2011_bugatti_veyron_super_sport.glb">Vehicle- 2011_bugatti_veyron_super_sport</option>
+          <option value="assets/Statue- sailing_ship_model.glb">Statue- sailing_ship_model</option>
+          <option value="assets/Statue- napoleon.glb">Statue- napoleon</option>
+          <option value="assets/Statue- masamune.glb">Statue- masamune</option>
+          <option value="assets/Statue- doraemo.glb">Statue- doraemo</option>
+          <option value="assets/Military- p-51d-20-na_mustang_war_thunder.glb">Military- p-51d-20-na_mustang_war_thunder</option>
+          <option value="assets/Military- p-51d.glb">Military- p-51d</option>
+          <option value="assets/Military- messerschmitt_bf_110.glb">Military- messerschmitt_bf_110</option>
+          <option value="assets/Military- merkava_mk.2d.glb">Military- merkava_mk.2d</option>
+          <option value="assets/Military- J-10s.glb">Military- J-10s</option>
+          <option value="assets/Military- bf110.glb">Military- bf110</option>
+          <option value="assets/Military- ah-64e_apache_guardian.glb">Military- ah-64e_apache_guardian</option>
+          <option value="assets/Food- hamburger-value_meal.glb">Food- hamburger-value_meal</option>
+          <option value="assets/Food- cabbage.glb">Food- cabbage</option>
         </select>
         <button id="btnLoadLib" title="加载库内模型">
           <span class="icon">◇</span>加载
@@ -302,14 +339,14 @@
 
     <div class="hud top-right">
       <div class="buttons">
-        <button id="btnB" title="顶视正方向，Z=0">
-          <span class="icon">⬆</span>B
+        <button class="axis-button" id="btnC" title="X=0，其他=1">
+          X
         </button>
-        <button id="btnC" title="X=0，其他=1">
-          <span class="icon">✕</span>C
+        <button class="axis-button" id="btnD" title="Y=0，其他=1">
+          Y
         </button>
-        <button id="btnD" title="Y=0，其他=1">
-          <span class="icon">𝑌</span>D
+        <button class="axis-button" id="btnB" title="顶视正方向，Z=0">
+          Z
         </button>
       </div>
       <div class="buttons">
@@ -849,3 +886,4 @@
   </script>
 </body>
 </html>
+
