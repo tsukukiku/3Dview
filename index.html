@@ -55,7 +55,7 @@
     }
 
     .top-left {
-      top: 12px;
+      top: 32px;
       left: 12px;
       padding: 5px;
       display: grid;
@@ -96,16 +96,20 @@
     .bottom-actions {
       right: 16px;
       bottom: 16px;
-      padding: 5px;
+      padding: 0;
       display: flex;
-      gap: 5px;
+      gap: 6px;
       z-index: 25;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     .bottom-actions button {
       font-size: 15px;
-      min-height: 40px;
-      padding: 8px 12px;
+      min-height: 34px;
+      padding: 6px 10px;
     }
 
     .fullscreen-only {
@@ -134,8 +138,20 @@
     }
 
     .coords {
-      font-size: 7px;
+      position: fixed;
+      top: 12px;
+      left: 16px;
+      z-index: 26;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      backdrop-filter: none;
+      pointer-events: none;
+      font-size: 8px;
       line-height: 1.2;
+      color: rgba(15, 23, 42, 0.9);
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.75);
     }
 
     .coords b {
@@ -299,6 +315,9 @@
         min-width: 0;
         width: calc(100% - 24px);
       }
+      .coords {
+        left: 14px;
+      }
       .action-row {
         flex-wrap: wrap;
       }
@@ -319,8 +338,8 @@
         bottom: 10px;
       }
       .bottom-actions button {
-        min-height: 38px;
-        padding: 7px 11px;
+        min-height: 34px;
+        padding: 6px 10px;
       }
     }
   </style>
@@ -330,9 +349,9 @@
   <div id="app">
     <canvas id="viewer"></canvas>
     <button class="hud menu-handle" id="btnMenuToggle" title="显示/隐藏顶部菜单">菜单</button>
+    <div class="coords" id="coords">X=<b>1.00</b> Y=<b>1.00</b> Z=<b>1.00</b></div>
 
     <div class="hud top-left">
-      <div class="coords" id="coords">X=<b>1.00</b> Y=<b>1.00</b> Z=<b>1.00</b></div>
       <div class="file-row">
         <textarea id="promptInput" placeholder="输入提示词，例如：a silver jeep wrangler rubicon, pbr texture"></textarea>
       </div>
@@ -385,8 +404,8 @@
           </button>
         </div>
         <div class="buttons advanced-controls" id="advancedControls">
-          <button id="btnA" title="重置到初始位置 (1,1,1)">
-            <span class="icon">↺</span>原姿态
+          <button id="btnA" title="复原坐标、旋转、位移和视角">
+            复原
           </button>
           <button id="btnSpinH" title="当前坐标慢速水平旋转">
             水平转
@@ -521,6 +540,7 @@
     let currentBackground = 'whiteGray';
     let currentJobId = null;
     let jobPollTimer = null;
+    let menuCollapseTimer = null;
 
     const backgrounds = {
       whiteGray: 'linear-gradient(180deg, #ffffff 0%, #d7dbe2 100%)',
@@ -540,22 +560,29 @@
       darkBlack: ['#111317', '#111317']
     };
 
-    function updateCoordinateDisplay() {
-      const p = pivot.position;
+    function updateCoordinateDisplay(position = controls.target) {
+      const p = position;
       coordsEl.innerHTML = `X=<b>${p.x.toFixed(2)}</b> Y=<b>${p.y.toFixed(2)}</b> Z=<b>${p.z.toFixed(2)}</b>`;
-      controls.target.copy(p);
     }
 
     function setPivotPosition(x, y, z) {
       pivot.position.set(x, y, z);
-      updateCoordinateDisplay();
+      controls.target.copy(pivot.position);
+      updateCoordinateDisplay(pivot.position);
     }
 
     function resetPose() {
+      clearTimeout(menuCollapseTimer);
       setPivotPosition(1, 1, 1);
       pivot.rotation.set(0, 0, 0);
+      if (modelRoot) {
+        modelRoot.rotation.set(0, 0, 0);
+      }
       camera.position.set(3.2, 2.6, 4.0);
+      controls.target.copy(pivot.position);
+      camera.lookAt(pivot.position);
       controls.update();
+      updateCoordinateDisplay(pivot.position);
     }
 
     function setTopViewPositive() {
@@ -563,16 +590,19 @@
       camera.position.set(pivot.position.x, pivot.position.y + 4, pivot.position.z);
       camera.lookAt(pivot.position);
       controls.update();
+      updateCoordinateDisplay(pivot.position);
     }
 
     function setXZero() {
       setPivotPosition(0, 1, 1);
       controls.update();
+      updateCoordinateDisplay(pivot.position);
     }
 
     function setYZero() {
       setPivotPosition(1, 0, 1);
       controls.update();
+      updateCoordinateDisplay(pivot.position);
     }
 
     function clearModel() {
@@ -635,6 +665,13 @@
       menuCollapsed = collapsed;
       document.body.classList.toggle('menu-collapsed', collapsed);
       btnMenuToggle.textContent = collapsed ? '菜单' : '收起';
+    }
+
+    function scheduleMenuCollapse(delayMs = 5000) {
+      clearTimeout(menuCollapseTimer);
+      menuCollapseTimer = setTimeout(() => {
+        setMenuCollapsed(true);
+      }, delayMs);
     }
 
     function applyBackground(name) {
@@ -793,6 +830,8 @@
     }
 
     function loadModelFromUrl(url, revokeAfterLoad = false) {
+      clearTimeout(menuCollapseTimer);
+      setMenuCollapsed(false);
       setStatus('正在加载模型...');
       loader.load(url, (gltf) => {
         clearModel();
@@ -801,7 +840,7 @@
         pivot.add(modelRoot);
         fitCameraToObject(modelRoot);
         setStatus('模型加载完成');
-        setMenuCollapsed(true);
+        scheduleMenuCollapse(5000);
         if (revokeAfterLoad) URL.revokeObjectURL(url);
       }, (event) => {
         if (!event.total) return;
@@ -904,6 +943,7 @@
       }
 
       controls.update();
+      updateCoordinateDisplay(controls.target);
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
