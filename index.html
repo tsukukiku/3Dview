@@ -129,6 +129,7 @@
     body.viewer-fullscreen .top-left,
     body.viewer-fullscreen .menu-handle,
     body.viewer-fullscreen .bottom-status,
+    body.viewer-fullscreen .side-controls,
     body.viewer-fullscreen .standard-only {
       display: none;
     }
@@ -245,25 +246,38 @@
       align-items: center;
     }
 
-    .brightness-control {
+    .side-controls {
+      position: fixed;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 24;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: var(--text);
+      font-size: 11px;
+    }
+
+    .side-control {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 3px;
       padding: 0 2px;
-      color: var(--text);
-      font-size: 11px;
     }
 
-    .brightness-control label {
-      writing-mode: horizontal-tb;
-      letter-spacing: 0;
+    .side-control label {
+      writing-mode: vertical-rl;
+      letter-spacing: 2px;
       line-height: 1;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
     }
 
-    .brightness-control input[type="range"] {
+    .side-control input[type="range"] {
       width: 28px;
-      height: 76px;
+      height: 104px;
       writing-mode: vertical-lr;
       direction: rtl;
     }
@@ -360,9 +374,12 @@
       input[type="range"] {
         width: 96px;
       }
-      .brightness-control input[type="range"] {
+      .side-controls {
+        right: 4px;
+      }
+      .side-control input[type="range"] {
         width: 26px;
-        height: 70px;
+        height: 86px;
       }
       input[type="file"] {
         width: 100%;
@@ -384,6 +401,16 @@
     <canvas id="viewer"></canvas>
     <button class="hud menu-handle" id="btnMenuToggle" title="显示/隐藏顶部菜单">菜单</button>
     <div class="coords" id="coords">X=<b>1.00</b> Y=<b>1.00</b> Z=<b>1.00</b></div>
+    <div class="side-controls" id="sideControls">
+      <div class="side-control">
+        <label for="saturationSlider">饱和度</label>
+        <input id="saturationSlider" type="range" min="0" max="200" value="100" />
+      </div>
+      <div class="side-control" id="brightnessControl">
+        <label for="brightnessSlider">亮度</label>
+        <input id="brightnessSlider" type="range" min="0" max="100" value="49" />
+      </div>
+    </div>
 
     <div class="hud top-left">
       <div class="file-row">
@@ -418,7 +445,6 @@
           <option value="assets/Military- merkava_mk.2d.glb">Military- merkava_mk.2d</option>
           <option value="assets/Military- J-10s.glb">Military- J-10s</option>
           <option value="assets/Military- bf110.glb">Military- bf110</option>
-          <option value="assets/Military- ah-64e_apache_guardian.glb">Military- ah-64e_apache_guardian</option>
           <option value="assets/Military- AH-1Z_viper.glb">Military- AH-1Z_viper</option>
           <option value="assets/Food- hamburger-value_meal.glb">Food- hamburger-value_meal</option>
           <option value="assets/Food- cabbage.glb">Food- cabbage</option>
@@ -457,12 +483,6 @@
             <button class="swatch" data-bg="grayGreen" title="上灰下浅绿" style="--swatch:linear-gradient(180deg,#d8dde5,#c9f3cf)"></button>
             <button class="swatch" data-bg="deepBlue" title="深蓝" style="--swatch:#0b3f7a"></button>
             <button class="swatch" data-bg="darkBlack" title="雅黑" style="--swatch:#111317"></button>
-          </div>
-          <label for="saturationSlider">饱和度:</label>
-          <input id="saturationSlider" type="range" min="0" max="200" value="100" />
-          <div class="brightness-control" id="brightnessControl">
-            <label for="brightnessSlider">亮度</label>
-            <input id="brightnessSlider" type="range" min="0" max="100" value="49" />
           </div>
         </div>
       </div>
@@ -513,6 +533,7 @@
     const btnToggleCoords = document.getElementById('btnToggleCoords');
     const brightnessSlider = document.getElementById('brightnessSlider');
     const brightnessControl = document.getElementById('brightnessControl');
+    const sideControls = document.getElementById('sideControls');
     const saturationSlider = document.getElementById('saturationSlider');
     const bgButtons = document.querySelectorAll('[data-bg]');
     const API_BASE_URL = (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL || '').replace(/\/$/, '');
@@ -801,7 +822,7 @@
     }
 
     function saveCurrentFrame() {
-      const hiddenForSave = [coordsEl, statusEl, btnMenuToggle, brightnessControl, document.querySelector('.top-left'), document.querySelector('.bottom-actions')];
+      const hiddenForSave = [coordsEl, statusEl, btnMenuToggle, sideControls, document.querySelector('.top-left'), document.querySelector('.bottom-actions')];
       const previousDisplays = hiddenForSave.map((element) => element ? element.style.display : null);
       hiddenForSave.forEach((element) => {
         if (element) element.style.display = 'none';
