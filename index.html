@@ -265,6 +265,22 @@
       min-height: 30px;
     }
 
+    .mode-toggle {
+      display: inline-flex;
+      gap: 3px;
+      align-items: center;
+    }
+
+    .mode-button {
+      width: 30px;
+      min-width: 30px;
+      height: 30px;
+      padding: 0;
+      border-radius: 50%;
+      justify-content: center;
+      font-weight: 700;
+    }
+
     .limit-note {
       font-size: 10px;
       opacity: 0.72;
@@ -479,6 +495,11 @@
       </div>
       <div class="file-row action-row">
         <input class="passcode-input" id="passcodeInput" type="password" placeholder="口令" autocomplete="off" />
+        <div class="mode-toggle" aria-label="生成类型">
+          <button class="mode-button active" data-mode="object" title="A 普通物体">A</button>
+          <button class="mode-button" data-mode="face" title="B 人脸头像">B</button>
+          <button class="mode-button" data-mode="body" title="C 全身人物">C</button>
+        </div>
         <button id="btnGenerate" title="从后端API生成GLB并自动加载">
           <span class="icon">✦</span>生成3D
         </button>
@@ -490,7 +511,7 @@
         </button>
         <input id="fileInput" type="file" accept=".glb,.gltf" style="display:none" />
       </div>
-      <div class="limit-note">口令：3DVIEW。照片会自动压缩到5MB以下。每IP每天最多2次生成。</div>
+      <div class="limit-note">A普通物体 / B人脸头像 / C全身人物。口令：3DVIEW。照片自动压缩到5MB以下。每IP每天最多2次生成。</div>
       <div class="file-row library-row">
         <label for="libSelect">库内模型:</label>
         <select id="libSelect">
@@ -599,6 +620,7 @@
     const btnSpinH = document.getElementById('btnSpinH');
     const btnSpinV = document.getElementById('btnSpinV');
     const btnToggleCoords = document.getElementById('btnToggleCoords');
+    const modeButtons = document.querySelectorAll('[data-mode]');
     const brightnessSlider = document.getElementById('brightnessSlider');
     const brightnessControl = document.getElementById('brightnessControl');
     const sideControls = document.getElementById('sideControls');
@@ -672,6 +694,7 @@
     let currentBackground = 'whiteGray';
     let currentSaturation = 100;
     let sampleImagePayload = null;
+    let generationMode = 'object';
     let currentJobId = null;
     let jobPollTimer = null;
     let menuCollapseTimer = null;
@@ -818,6 +841,41 @@
     function setGenerating(isGenerating) {
       btnGenerate.disabled = isGenerating;
       btnGenerate.classList.toggle('active', isGenerating);
+    }
+
+    function setGenerationMode(mode) {
+      generationMode = mode;
+      modeButtons.forEach((button) => button.classList.toggle('active', button.dataset.mode === mode));
+    }
+
+    function buildPromptByMode(prompt) {
+      const base = prompt.trim();
+      if (generationMode === 'face') {
+        return [
+          'Create a realistic 3D bust portrait from the uploaded face photo.',
+          'Preserve facial identity, head shape, hairstyle, skin tone, and expression.',
+          'Generate only head, neck, and upper shoulders. No full body.',
+          'Front 3/4 view, centered, clean geometry, realistic PBR texture, optimized GLB.',
+          'Avoid cartoon style, avoid exaggerated features, avoid beautifying or changing the face.',
+          base
+        ].join(' ');
+      }
+      if (generationMode === 'body') {
+        return [
+          'Create a complete full-body 3D character from the uploaded person photo.',
+          'Full body visible from head to feet, no cropping, neutral standing pose.',
+          'Preserve clothing colors, hairstyle, body silhouette, and overall identity.',
+          'Clean low-to-medium poly geometry, realistic PBR texture, optimized GLB.',
+          'Avoid missing limbs, avoid cropped feet, avoid cartoon style unless requested.',
+          base
+        ].join(' ');
+      }
+      return [
+        'Create a clean, complete 3D model from the uploaded reference image.',
+        'Full object visible, no cropping, centered composition, front 3/4 view.',
+        'Clean low-to-medium poly geometry, texture size 1024 or lower, optimized GLB.',
+        base
+      ].join(' ');
     }
 
     function readFileAsDataUrl(file) {
@@ -1046,9 +1104,9 @@
     }
 
     async function startGeneration() {
-      const prompt = promptInput.value.trim();
+      const rawPrompt = promptInput.value.trim();
       const passcode = passcodeInput.value.trim();
-      if (!prompt) {
+      if (!rawPrompt) {
         alert('请输入生成提示词');
         return;
       }
@@ -1065,10 +1123,12 @@
         setGenerating(true);
         setMenuCollapsed(false);
         setStatus('正在提交生成任务...');
+        const prompt = buildPromptByMode(rawPrompt);
         const job = await requestJson('/api/generate', {
           method: 'POST',
           body: JSON.stringify({
             prompt,
+            mode: generationMode,
             passcode,
             image: sampleImagePayload
           })
@@ -1196,6 +1256,10 @@
       setCoordsVisible(!coordsVisible);
     });
 
+    modeButtons.forEach((button) => {
+      button.addEventListener('click', () => setGenerationMode(button.dataset.mode));
+    });
+
     btnMenuToggle.addEventListener('click', () => {
       setMenuCollapsed(!menuCollapsed);
     });
@@ -1243,6 +1307,7 @@
     applyBackground('whiteGray');
     applyBrightness(brightnessSlider.value);
     applySaturation(saturationSlider.value);
+    setGenerationMode('object');
     setCoordsVisible(true);
     setMenuCollapsed(false);
     updateCoordinateDisplay();
