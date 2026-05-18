@@ -697,6 +697,12 @@
     let generationMode = 'object';
     let currentJobId = null;
     let jobPollTimer = null;
+    let generationHeartbeatTimer = null;
+    let generationStartedAt = 0;
+    let generationPollCount = 0;
+    let generationProgress = 0;
+    let generationPhase = 'AI正在生成3D模型';
+    let generateButtonHtml = '';
     let menuCollapseTimer = null;
 
     const backgrounds = {
@@ -838,9 +844,36 @@
       statusEl.textContent = text;
     }
 
+    function formatElapsed(ms) {
+      const total = Math.max(0, Math.floor(ms / 1000));
+      const min = String(Math.floor(total / 60)).padStart(2, '0');
+      const sec = String(total % 60).padStart(2, '0');
+      return `${min}:${sec}`;
+    }
+
+    function generationWaitText(progress = 0, phase = 'AI正在生成3D模型') {
+      const elapsed = generationStartedAt ? formatElapsed(Date.now() - generationStartedAt) : '00:00';
+      const dots = '.'.repeat((Math.floor((Date.now() - (generationStartedAt || Date.now())) / 1000) % 3) + 1);
+      return `${phase}${dots} 已等待 ${elapsed} / 进度 ${progress || 0}% / 查询 ${generationPollCount} 次。请不要重复点击。`;
+    }
+
     function setGenerating(isGenerating) {
       btnGenerate.disabled = isGenerating;
       btnGenerate.classList.toggle('active', isGenerating);
+      if (isGenerating) {
+        if (!generateButtonHtml) generateButtonHtml = btnGenerate.innerHTML;
+        btnGenerate.textContent = `生成中 ${generationStartedAt ? formatElapsed(Date.now() - generationStartedAt) : '00:00'}`;
+        clearInterval(generationHeartbeatTimer);
+        generationHeartbeatTimer = setInterval(() => {
+          btnGenerate.textContent = `生成中 ${formatElapsed(Date.now() - generationStartedAt)}`;
+          setStatus(generationWaitText(generationProgress, generationPhase));
+        }, 1000);
+      } else if (generateButtonHtml) {
+        clearInterval(generationHeartbeatTimer);
+        generationHeartbeatTimer = null;
+        btnGenerate.innerHTML = generateButtonHtml;
+        generateButtonHtml = '';
+      }
     }
 
     function setGenerationMode(mode) {
@@ -1083,8 +1116,12 @@
       }
 
       const job = await requestJson(`/api/jobs/${currentJobId}`);
+      generationPollCount += 1;
       const providerStatus = job.providerStatus ? ` / ${job.providerStatus}` : '';
-      setStatus(`生成进度: ${job.status}${providerStatus} ${job.progress || 0}%`);
+      generationProgress = job.progress || 0;
+      generationPhase = `状态: ${job.status}${providerStatus}`;
+      if (generationStartedAt) btnGenerate.textContent = `生成中 ${formatElapsed(Date.now() - generationStartedAt)}`;
+      setStatus(generationWaitText(generationProgress, generationPhase));
 
       if (job.status === 'FINISHED' && job.modelUrl) {
         clearInterval(jobPollTimer);
@@ -1104,6 +1141,7 @@
     }
 
     async function startGeneration() {
+      if (btnGenerate.disabled) return;
       const rawPrompt = promptInput.value.trim();
       const passcode = passcodeInput.value.trim();
       if (!rawPrompt) {
@@ -1120,9 +1158,13 @@
       }
 
       try {
+        generationStartedAt = Date.now();
+        generationPollCount = 0;
+        generationProgress = 5;
+        generationPhase = '正在提交生成任务';
         setGenerating(true);
         setMenuCollapsed(false);
-        setStatus('正在提交生成任务...');
+        setStatus(generationWaitText(generationProgress, generationPhase));
         const prompt = buildPromptByMode(rawPrompt);
         const job = await requestJson('/api/generate', {
           method: 'POST',
@@ -1134,7 +1176,9 @@
           })
         });
         currentJobId = job.id;
-        setStatus(`任务已提交，后台生成中: ${job.id}`);
+        generationProgress = job.progress || 10;
+        generationPhase = `任务已提交，后台生成中 Job: ${job.id}`;
+        setStatus(generationWaitText(generationProgress, generationPhase));
 
         clearInterval(jobPollTimer);
         jobPollTimer = setInterval(() => {
@@ -1142,13 +1186,13 @@
             clearInterval(jobPollTimer);
             jobPollTimer = null;
             setGenerating(false);
-            setStatus(`进度检查失败: ${error.message}`);
+            setStatus(`进度检查失败: ${error.message}。已等待 ${formatElapsed(Date.now() - generationStartedAt)}。`);
           });
         }, 5000);
         await checkGenerationJob(false);
       } catch (error) {
         setGenerating(false);
-        setStatus(`提交失败: ${error.message}`);
+        setStatus(`提交失败: ${error.message}。已等待 ${generationStartedAt ? formatElapsed(Date.now() - generationStartedAt) : '00:00'}。`);
       }
     }
 
@@ -1315,5 +1359,6 @@
   </script>
 </body>
 </html>
+
 
 
