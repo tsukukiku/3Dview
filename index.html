@@ -223,30 +223,30 @@
 
     .prompt-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(108px, 0.9fr);
+      grid-template-columns: 86px 112px minmax(0, 1fr);
       gap: 6px;
       align-items: stretch;
     }
 
     .sample-uploader {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-rows: 1fr 1fr;
       gap: 4px;
-      align-content: stretch;
-      align-items: stretch;
       min-width: 0;
     }
 
     .sample-uploader button {
+      width: 100%;
       padding-left: 6px;
       padding-right: 6px;
       white-space: nowrap;
+      justify-content: center;
     }
 
     .preview-box {
       width: 100%;
-      min-width: 78px;
-      height: 50px;
+      min-width: 96px;
+      height: 64px;
       border: 1px solid var(--border);
       border-radius: 7px;
       background: rgba(15, 23, 42, 0.72);
@@ -265,7 +265,7 @@
     }
 
     .passcode-input {
-      width: 82px;
+      width: 100%;
       border: 1px solid var(--border);
       background: rgba(15, 23, 42, 0.92);
       color: var(--text);
@@ -310,7 +310,7 @@
     }
 
     .speed-control input[type="range"] {
-      width: 78px;
+      width: 92px;
     }
 
     .speed-value {
@@ -465,14 +465,11 @@
         flex-wrap: wrap;
       }
       .prompt-row {
-        grid-template-columns: minmax(0, 1fr) minmax(112px, 0.85fr);
-      }
-      .sample-uploader {
-        grid-template-columns: 1fr;
+        grid-template-columns: 88px 112px minmax(0, 1fr);
       }
       .preview-box {
         width: 100%;
-        height: 34px;
+        height: 64px;
       }
       .speed-control input[type="range"] {
         width: 70px;
@@ -526,15 +523,15 @@
 
     <div class="hud top-left">
       <div class="prompt-row">
-        <textarea id="promptInput">输入提示词，依照照片生成3D图，Texture 1024，GLB格式</textarea>
         <div class="sample-uploader">
-          <button id="btnSampleImage" title="上传给Triple3D参考的样本照片">样本照片</button>
+          <button id="btnSampleImage" title="上传给Triple3D参考的样本照片">样品照片</button>
+          <input class="passcode-input" id="passcodeInput" type="password" placeholder="口令" autocomplete="off" />
           <input id="sampleImageInput" type="file" accept="image/*" style="display:none" />
-          <div class="preview-box" id="samplePreview">预览照片</div>
         </div>
+        <div class="preview-box" id="samplePreview">预览照片</div>
+        <textarea id="promptInput">输入提示词，依照照片生成3D图，Texture 1024，GLB格式</textarea>
       </div>
       <div class="file-row action-row">
-        <input class="passcode-input" id="passcodeInput" type="password" placeholder="口令" autocomplete="off" />
         <div class="mode-toggle" aria-label="生成类型">
           <button class="mode-button active" data-mode="object" title="A 普通物体">A</button>
           <button class="mode-button" data-mode="face" title="B 人脸头像">B</button>
@@ -601,22 +598,22 @@
           </button>
           <label class="speed-control" for="spinSpeedSlider" title="水平转和垂直转的转速">
             转速
-            <input id="spinSpeedSlider" type="range" min="0.2" max="5" step="0.1" value="1" />
-            <span class="speed-value" id="spinSpeedValue">1.0rpm</span>
+            <input id="spinSpeedSlider" type="range" min="1" max="100" step="1" value="10" />
+            <span class="speed-value" id="spinSpeedValue">10rpm</span>
           </label>
         </div>
         <div class="buttons light-row">
           <div class="swatch-group" aria-label="背景颜色">
             <button class="swatch active" data-bg="whiteGray" title="上白下灰渐变色" style="--swatch:linear-gradient(180deg,#ffffff,#d7dbe2)"></button>
-            <button class="swatch" data-bg="grayBlue" title="上灰下浅蓝渐变色" style="--swatch:linear-gradient(180deg,#d8dde5,#bfe3ff)"></button>
+            <button class="swatch" data-bg="warmCream" title="暖米色" style="--swatch:linear-gradient(180deg,#fff7e8,#e9d4b7)"></button>
+            <button class="swatch" data-bg="roseMist" title="淡粉雾" style="--swatch:linear-gradient(180deg,#fff1f2,#f9c6d0)"></button>
             <button class="swatch" data-bg="grayYellow" title="上灰下浅黄" style="--swatch:linear-gradient(180deg,#d8dde5,#fff1a8)"></button>
             <button class="swatch" data-bg="grayGreen" title="上灰下浅绿" style="--swatch:linear-gradient(180deg,#d8dde5,#c9f3cf)"></button>
+            <button class="swatch" data-bg="tealMint" title="青绿渐变" style="--swatch:linear-gradient(180deg,#dffcf5,#8bd8cf)"></button>
+            <button class="swatch" data-bg="grayBlue" title="上灰下浅蓝渐变色" style="--swatch:linear-gradient(180deg,#d8dde5,#bfe3ff)"></button>
+            <button class="swatch" data-bg="studioGray" title="摄影棚灰" style="--swatch:linear-gradient(180deg,#f3f4f6,#9ca3af)"></button>
             <button class="swatch" data-bg="deepBlue" title="深蓝" style="--swatch:#0b3f7a"></button>
             <button class="swatch" data-bg="darkBlack" title="雅黑" style="--swatch:#111317"></button>
-            <button class="swatch" data-bg="warmCream" title="暖米色" style="--swatch:linear-gradient(180deg,#fff7e8,#e9d4b7)"></button>
-            <button class="swatch" data-bg="studioGray" title="摄影棚灰" style="--swatch:linear-gradient(180deg,#f3f4f6,#9ca3af)"></button>
-            <button class="swatch" data-bg="roseMist" title="淡粉雾" style="--swatch:linear-gradient(180deg,#fff1f2,#f9c6d0)"></button>
-            <button class="swatch" data-bg="tealMint" title="青绿渐变" style="--swatch:linear-gradient(180deg,#dffcf5,#8bd8cf)"></button>
           </div>
         </div>
       </div>
@@ -740,7 +737,7 @@
     let modelRoot = null;
     let spinHorizontal = false;
     let spinVertical = false;
-    let spinSpeedRpm = 1;
+    let spinSpeedRpm = 10;
     let coordsVisible = true;
     let menuCollapsed = false;
     let currentBackground = 'whiteGray';
@@ -797,8 +794,8 @@
     }
 
     function updateSpinSpeed() {
-      spinSpeedRpm = Math.max(0.2, Math.min(5, Number(spinSpeedSlider.value) || 1));
-      spinSpeedValue.textContent = `${spinSpeedRpm.toFixed(1)}rpm`;
+      spinSpeedRpm = Math.max(1, Math.min(100, Number(spinSpeedSlider.value) || 10));
+      spinSpeedValue.textContent = `${Math.round(spinSpeedRpm)}rpm`;
     }
 
     function setPivotPosition(x, y, z) {
