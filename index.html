@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -223,20 +223,30 @@
 
     .prompt-row {
       display: grid;
-      grid-template-columns: 86px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) minmax(108px, 0.9fr);
       gap: 6px;
       align-items: stretch;
     }
 
     .sample-uploader {
       display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
       gap: 4px;
-      align-content: start;
+      align-content: stretch;
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .sample-uploader button {
+      padding-left: 6px;
+      padding-right: 6px;
+      white-space: nowrap;
     }
 
     .preview-box {
-      width: 86px;
-      height: 54px;
+      width: 100%;
+      min-width: 78px;
+      height: 50px;
       border: 1px solid var(--border);
       border-radius: 7px;
       background: rgba(15, 23, 42, 0.72);
@@ -284,6 +294,30 @@
     .limit-note {
       font-size: 10px;
       opacity: 0.72;
+    }
+
+    .speed-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 30px;
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: rgba(15, 23, 42, 0.72);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .speed-control input[type="range"] {
+      width: 78px;
+    }
+
+    .speed-value {
+      min-width: 44px;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
     }
 
     .action-row,
@@ -431,11 +465,17 @@
         flex-wrap: wrap;
       }
       .prompt-row {
-        grid-template-columns: 78px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) minmax(112px, 0.85fr);
+      }
+      .sample-uploader {
+        grid-template-columns: 1fr;
       }
       .preview-box {
-        width: 78px;
-        height: 50px;
+        width: 100%;
+        height: 34px;
+      }
+      .speed-control input[type="range"] {
+        width: 70px;
       }
       .library-row select {
         width: 46vw;
@@ -486,12 +526,12 @@
 
     <div class="hud top-left">
       <div class="prompt-row">
+        <textarea id="promptInput">输入提示词，依照照片生成3D图，Texture 1024，GLB格式</textarea>
         <div class="sample-uploader">
           <button id="btnSampleImage" title="上传给Triple3D参考的样本照片">样本照片</button>
           <input id="sampleImageInput" type="file" accept="image/*" style="display:none" />
-          <div class="preview-box" id="samplePreview">预览</div>
+          <div class="preview-box" id="samplePreview">预览照片</div>
         </div>
-        <textarea id="promptInput" placeholder="输入提示词，例如：a silver jeep wrangler rubicon, pbr texture"></textarea>
       </div>
       <div class="file-row action-row">
         <input class="passcode-input" id="passcodeInput" type="password" placeholder="口令" autocomplete="off" />
@@ -559,6 +599,11 @@
           <button id="btnSpinV" title="当前坐标慢速垂直旋转">
             垂直转
           </button>
+          <label class="speed-control" for="spinSpeedSlider" title="水平转和垂直转的转速">
+            转速
+            <input id="spinSpeedSlider" type="range" min="0.2" max="5" step="0.1" value="1" />
+            <span class="speed-value" id="spinSpeedValue">1.0rpm</span>
+          </label>
         </div>
         <div class="buttons light-row">
           <div class="swatch-group" aria-label="背景颜色">
@@ -568,6 +613,10 @@
             <button class="swatch" data-bg="grayGreen" title="上灰下浅绿" style="--swatch:linear-gradient(180deg,#d8dde5,#c9f3cf)"></button>
             <button class="swatch" data-bg="deepBlue" title="深蓝" style="--swatch:#0b3f7a"></button>
             <button class="swatch" data-bg="darkBlack" title="雅黑" style="--swatch:#111317"></button>
+            <button class="swatch" data-bg="warmCream" title="暖米色" style="--swatch:linear-gradient(180deg,#fff7e8,#e9d4b7)"></button>
+            <button class="swatch" data-bg="studioGray" title="摄影棚灰" style="--swatch:linear-gradient(180deg,#f3f4f6,#9ca3af)"></button>
+            <button class="swatch" data-bg="roseMist" title="淡粉雾" style="--swatch:linear-gradient(180deg,#fff1f2,#f9c6d0)"></button>
+            <button class="swatch" data-bg="tealMint" title="青绿渐变" style="--swatch:linear-gradient(180deg,#dffcf5,#8bd8cf)"></button>
           </div>
         </div>
       </div>
@@ -620,6 +669,8 @@
     const btnSpinH = document.getElementById('btnSpinH');
     const btnSpinV = document.getElementById('btnSpinV');
     const btnToggleCoords = document.getElementById('btnToggleCoords');
+    const spinSpeedSlider = document.getElementById('spinSpeedSlider');
+    const spinSpeedValue = document.getElementById('spinSpeedValue');
     const modeButtons = document.querySelectorAll('[data-mode]');
     const brightnessSlider = document.getElementById('brightnessSlider');
     const brightnessControl = document.getElementById('brightnessControl');
@@ -689,6 +740,7 @@
     let modelRoot = null;
     let spinHorizontal = false;
     let spinVertical = false;
+    let spinSpeedRpm = 1;
     let coordsVisible = true;
     let menuCollapsed = false;
     let currentBackground = 'whiteGray';
@@ -711,7 +763,11 @@
       grayYellow: 'linear-gradient(180deg, #d8dde5 0%, #fff1a8 100%)',
       grayGreen: 'linear-gradient(180deg, #d8dde5 0%, #c9f3cf 100%)',
       deepBlue: '#0b3f7a',
-      darkBlack: '#111317'
+      darkBlack: '#111317',
+      warmCream: 'linear-gradient(180deg, #fff7e8 0%, #e9d4b7 100%)',
+      studioGray: 'linear-gradient(180deg, #f3f4f6 0%, #9ca3af 100%)',
+      roseMist: 'linear-gradient(180deg, #fff1f2 0%, #f9c6d0 100%)',
+      tealMint: 'linear-gradient(180deg, #dffcf5 0%, #8bd8cf 100%)'
     };
 
     const saveBackgrounds = {
@@ -738,6 +794,11 @@
       spinVertical = false;
       btnSpinH.classList.remove('active');
       btnSpinV.classList.remove('active');
+    }
+
+    function updateSpinSpeed() {
+      spinSpeedRpm = Math.max(0.2, Math.min(5, Number(spinSpeedSlider.value) || 1));
+      spinSpeedValue.textContent = `${spinSpeedRpm.toFixed(1)}rpm`;
     }
 
     function setPivotPosition(x, y, z) {
@@ -1296,6 +1357,8 @@
       btnSpinV.classList.toggle('active', spinVertical);
     });
 
+    spinSpeedSlider.addEventListener('input', updateSpinSpeed);
+
     btnToggleCoords.addEventListener('click', () => {
       setCoordsVisible(!coordsVisible);
     });
@@ -1334,11 +1397,12 @@
     function animate() {
       const dt = clock.getDelta();
 
+      const spinRadiansPerSecond = spinSpeedRpm * Math.PI * 2 / 60;
       if (spinHorizontal) {
-        pivot.rotation.y += dt * 0.4;
+        pivot.rotation.y += dt * spinRadiansPerSecond;
       }
       if (spinVertical) {
-        pivot.rotation.x += dt * 0.4;
+        pivot.rotation.x += dt * spinRadiansPerSecond;
       }
 
       controls.update();
@@ -1351,6 +1415,7 @@
     applyBackground('whiteGray');
     applyBrightness(brightnessSlider.value);
     applySaturation(saturationSlider.value);
+    updateSpinSpeed();
     setGenerationMode('object');
     setCoordsVisible(true);
     setMenuCollapsed(false);
